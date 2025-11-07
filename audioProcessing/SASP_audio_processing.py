@@ -9,6 +9,10 @@ from scipy.io import wavfile
 import matplotlib
 import matplotlib.pyplot as plt
 
+MAX_PEAKS_PER_COLUMN = 5
+FAN_VALUE = 5
+MAX_TIME_DELTA = 20
+
 """
  Shared internal function 
  Computes the shared part of audio processing for both inputs: file and microphone
@@ -120,3 +124,55 @@ def compute_audio_fingerprint(freq_bins, power_matrix, sample_rate):
     fingerprint_matrix = np.array(octave_fingerprints).T
     print("[INFO] Fingerprint generated successfully.")
     return fingerprint_matrix
+
+
+def _extract_peak_constellation(power_matrix, max_peaks=MAX_PEAKS_PER_COLUMN):
+    peaks = []
+    num_time_bins = power_matrix.shape[1]
+
+    for time_idx in range(num_time_bins):
+        column = power_matrix[:, time_idx]
+        if not np.any(column):
+            continue
+
+        limited_peaks = min(max_peaks, len(column))
+        peak_indices = np.argpartition(column, -limited_peaks)[-limited_peaks:]
+        for freq_idx in peak_indices:
+            peaks.append((time_idx, freq_idx, column[freq_idx]))
+
+    peaks.sort(key=lambda entry: entry[0])
+    return peaks
+
+
+def generate_constellation_hashes(freq_bins, time_bins, power_matrix,
+                                  max_peaks_per_column=MAX_PEAKS_PER_COLUMN,
+                                  fan_value=FAN_VALUE,
+                                  max_time_delta=MAX_TIME_DELTA):
+    peaks = _extract_peak_constellation(power_matrix, max_peaks=max_peaks_per_column)
+
+    hashes = []
+    num_peaks = len(peaks)
+
+    for anchor_idx in range(num_peaks):
+        anchor_time_idx, anchor_freq_idx, _ = peaks[anchor_idx]
+
+        for offset in range(1, fan_value + 1):
+            target_idx = anchor_idx + offset
+            if target_idx >= num_peaks:
+                break
+
+            target_time_idx, target_freq_idx, _ = peaks[target_idx]
+            delta_time = target_time_idx - anchor_time_idx
+
+            if delta_time <= 0 or delta_time > max_time_delta:
+                continue
+
+            hash_tuple = (
+                int(anchor_freq_idx),
+                int(target_freq_idx),
+                int(delta_time),
+            )
+
+            hashes.append((hash_tuple, int(anchor_time_idx)))
+
+    return hashes
