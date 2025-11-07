@@ -1,5 +1,7 @@
 # PostgreSQL database management for audio fingerprint storage(Creates database, inserts data, updates )
 
+import os
+
 import psycopg2
 from .config import HOST,DATABASE,DB_USER, DB_PASSWORD
 
@@ -42,36 +44,39 @@ def initialize_schema(db_conn):
 
 
 def insert_track_metadata(title, db_conn):
-    # Adds a new track to the music table
+    # Adds a new track to the music table and returns its id
     cursor = db_conn.cursor()
-    insert_sql = "INSERT INTO music (title) VALUES (%s)"
+    insert_sql = "INSERT INTO music (title) VALUES (%s) RETURNING song_id"
     cursor.execute(insert_sql, (title,))
+    track_id = cursor.fetchone()[0]
     db_conn.commit()
+    return track_id
 
 def lookup_track_id_by_filename(file_name, db_conn):
     # Retrieves track ID using filename (removes .wav extension)
     cursor = db_conn.cursor()
     select_sql = 'SELECT song_id from music WHERE title = %s'
-    title_value = (file_name[:-4],)
-    print(f"Looking for title: '{file_name[:-4]}'")
+    title_without_ext = os.path.splitext(file_name)[0]
+    print(f"Looking for title: '{title_without_ext}'")
+    title_value = (title_without_ext,)
     cursor.execute(select_sql, title_value)
     result_rows = cursor.fetchall()
     print("Found records:", result_rows)
     return result_rows[0][0]
 
-def store_audio_signatures(file_name, time_array, signature_data, db_conn):
-    # Stores fingerprint signatures for a track
+def store_fingerprint_hashes(track_id, hash_entries, db_conn):
+    # Stores hashed fingerprint signatures for a track
     insert_query = 'INSERT INTO fingerprint (song_id, center, signature) VALUES (%s,%s,%s)'
-    track_id = lookup_track_id_by_filename(file_name, db_conn)
-    for idx in range(len(time_array)):
+    cursor = db_conn.cursor()
+    for hash_tuple, anchor_time_idx in hash_entries:
         row_data = (
             track_id,
-            float(time_array[idx]),
-            [float(val) for val in signature_data[idx]]
+            int(anchor_time_idx),
+            [int(component) for component in hash_tuple]
         )
-        cursor = db_conn.cursor()
         cursor.execute(insert_query, row_data)
-        db_conn.commit()
+
+    db_conn.commit()
 
 
 def mark_as_fingerprinted(track_id, db_conn):
@@ -100,10 +105,12 @@ def get_highest_track_id(db_conn):
 
 
 def fetch_track_signatures(db_conn, track_id):
-    # Retrieves all fingerprint signatures for a specific track
+    # Retrieves all fingerprint hashes for a specific track
     cursor = db_conn.cursor()
-    cursor.execute('select signature from fingerprint where song_id=%s', (track_id,))
+    cursor.execute('select center, signature from fingerprint where song_id=%s', (track_id,))
     result_rows = cursor.fetchall()
-    # Transform database decimals to Python floats
-    result_rows = [list(map(float, list(row[0]))) for row in result_rows]
-    return result_rows
+    formatted_rows = [
+        (int(center), [int(component) for component in signature])
+        for center, signature in result_rows
+    ]
+    return formatted_rows
