@@ -9,9 +9,10 @@ from scipy.io import wavfile
 import matplotlib
 import matplotlib.pyplot as plt
 
-MAX_PEAKS_PER_COLUMN = 5
-FAN_VALUE = 5
-MAX_TIME_DELTA = 20
+MAX_PEAKS_PER_COLUMN = 3
+MIN_PEAK_MAG_RATIO = 0.35
+FAN_VALUE = 4
+MAX_TIME_DELTA = 15
 
 """
  Shared internal function 
@@ -135,10 +136,19 @@ def _extract_peak_constellation(power_matrix, max_peaks=MAX_PEAKS_PER_COLUMN):
         if not np.any(column):
             continue
 
+        column_max = float(np.max(column))
+        if column_max <= 0:
+            continue
+
         limited_peaks = min(max_peaks, len(column))
         peak_indices = np.argpartition(column, -limited_peaks)[-limited_peaks:]
+        magnitude_threshold = column_max * MIN_PEAK_MAG_RATIO
+
         for freq_idx in peak_indices:
-            peaks.append((time_idx, freq_idx, column[freq_idx]))
+            magnitude = float(column[freq_idx])
+            if magnitude < magnitude_threshold:
+                continue
+            peaks.append((time_idx, freq_idx, magnitude))
 
     peaks.sort(key=lambda entry: entry[0])
     return peaks
@@ -175,4 +185,5 @@ def generate_constellation_hashes(freq_bins, time_bins, power_matrix,
 
             hashes.append((hash_tuple, int(anchor_time_idx)))
 
-    return hashes
+    unique_hashes = list(dict.fromkeys(hashes))
+    return unique_hashes

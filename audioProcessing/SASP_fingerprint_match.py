@@ -37,8 +37,6 @@ def average_distance_between_fingerprints(query_matrix, reference_matrix, metric
     min_windows = min(len(query), len(reference))
     distances = [fingerprint_distance(query[idx], reference[idx], metric=metric) for idx in range(min_windows)]
 
-    # Penalize mismatched lengths by adding average distance of extra windows.
-    # This keeps longer fingerprints from automatically winning.
     if len(query) != len(reference):
         longer = query if len(query) > len(reference) else reference
         extra_distances = [fingerprint_distance(window, longer[min_windows - 1], metric=metric) for window in longer[min_windows:]]

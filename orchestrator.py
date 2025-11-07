@@ -12,6 +12,10 @@ from audioProcessing import (
     SASP_audio_utils as audio_utils,
 )
 
+MIN_ABSOLUTE_VOTES = 5
+MIN_SNIPPET_VOTE_RATIO = 0.012
+MIN_STORED_VOTE_RATIO = 0.008
+
 
 def _iter_files(directory: str, suffix: str) -> Iterable[str]:
     if not os.path.isdir(directory):
@@ -67,16 +71,8 @@ def construct_music_database(db_connection, mp3_directory: str = "./music/mp3", 
     print("[INFO] Database construction finished.")
 
 
-def find_matching_track(db_connection, snippet_path: str) -> List[str]:
-    """Return titles of tracks whose fingerprints best match the snippet."""
-
-    spectrogram = audio_processing.generate_spectrogram_from_wav(snippet_path)
-    if spectrogram is None:
-        print(f"[ERROR] Unable to process snippet: {snippet_path}")
-        return []
-
-    sample_rate, freq_bins, time_bins, power_matrix = spectrogram
-    snippet_hashes = audio_processing.generate_constellation_hashes(freq_bins, time_bins, power_matrix)
+def identify_from_hashes(db_connection, snippet_hashes) -> List[str]:
+    """Return titles whose stored hashes best align with the snippet hashes."""
 
     if not snippet_hashes:
         print("[WARN] No hashes generated for snippet; unable to match.")
@@ -86,17 +82,21 @@ def find_matching_track(db_connection, snippet_path: str) -> List[str]:
     for hash_tuple, anchor_time_idx in snippet_hashes:
         hash_to_snippet_times[tuple(hash_tuple)].append(anchor_time_idx)
 
+    snippet_hash_count = len(snippet_hashes)
+
     max_track_id = db.get_highest_track_id(db_connection)
     if max_track_id is None:
         print("[WARN] No tracks in database.")
         return []
 
-    vote_scores = []
+    score_details = []
     for song_id in range(1, max_track_id + 1):
         stored_hashes = db.fetch_track_signatures(db_connection, song_id)
 
-        if not stored_hashes:
-            vote_scores.append(0)
+        stored_hash_count = len(stored_hashes)
+
+        if not stored_hash_count:
+            score_details.append({"song_id": song_id, "votes": 0, "ratio": 0.0, "stored_ratio": 0.0, "score": 0.0})
             continue
 
         offset_votes = defaultdict(int)
@@ -111,24 +111,75 @@ def find_matching_track(db_connection, snippet_path: str) -> List[str]:
                 offset = anchor_time_idx - snippet_time
                 offset_votes[offset] += 1
 
-        vote_scores.append(max(offset_votes.values()) if offset_votes else 0)
+        if not offset_votes:
+            score_details.append({"song_id": song_id, "votes": 0, "ratio": 0.0, "stored_ratio": 0.0, "score": 0.0})
+            continue
 
-    if not vote_scores:
+        best_vote = max(offset_votes.values())
+        snippet_ratio = best_vote / snippet_hash_count
+
+        stored_ratio = best_vote / stored_hash_count
+
+        if (
+            best_vote < MIN_ABSOLUTE_VOTES
+            or snippet_ratio < MIN_SNIPPET_VOTE_RATIO
+            or stored_ratio < MIN_STORED_VOTE_RATIO
+        ):
+            score_details.append({"song_id": song_id, "votes": 0, "ratio": 0.0, "stored_ratio": 0.0, "score": 0.0})
+            continue
+
+        combined_score = snippet_ratio * stored_ratio
+        score_details.append(
+            {
+                "song_id": song_id,
+                "votes": best_vote,
+                "ratio": snippet_ratio,
+                "stored_ratio": stored_ratio,
+                "score": combined_score,
+            }
+        )
+
+    if not score_details:
         print("[WARN] No fingerprints stored; cannot identify snippet.")
         return []
 
-    best_vote = max(vote_scores)
-    if best_vote == 0:
-        print("[INFO] No matching hashes found for snippet.")
+    valid_scores = [detail for detail in score_details if detail["votes"] > 0]
+    if not valid_scores:
+        print("[INFO] No matching hashes met the confidence thresholds.")
         return []
 
-    best_song_ids = [index + 1 for index, score in enumerate(vote_scores) if score == best_vote]
+    best_score = max(detail["score"] for detail in valid_scores)
+    top_candidates = [detail for detail in valid_scores if detail["score"] == best_score]
+
+    best_votes = max(detail["votes"] for detail in top_candidates)
+    best_song_ids = [detail["song_id"] for detail in top_candidates if detail["votes"] == best_votes]
+
+    score_by_song = {detail["song_id"]: detail for detail in top_candidates}
 
     matches = []
     for song_id in best_song_ids:
         title = db.get_track_name_by_id(song_id, db_connection)
         matches.append(title)
-        print(f"[INFO] Best candidate song_id={song_id}, title='{title}', votes={best_vote}.")
+        song_score = score_by_song[song_id]
+        print(
+            f"[INFO] Best candidate song_id={song_id}, title='{title}', "
+            f"votes={song_score['votes']}, snippet_ratio={song_score['ratio']:.3f}, "
+            f"stored_ratio={song_score['stored_ratio']:.3f}, score={song_score['score']:.5f}."
+        )
 
     return matches
+
+
+def find_matching_track(db_connection, snippet_path: str) -> List[str]:
+    """Return titles of tracks whose fingerprints best match the snippet file."""
+
+    spectrogram = audio_processing.generate_spectrogram_from_wav(snippet_path)
+    if spectrogram is None:
+        print(f"[ERROR] Unable to process snippet: {snippet_path}")
+        return []
+
+    sample_rate, freq_bins, time_bins, power_matrix = spectrogram
+    snippet_hashes = audio_processing.generate_constellation_hashes(freq_bins, time_bins, power_matrix)
+
+    return identify_from_hashes(db_connection, snippet_hashes)
 

@@ -30,7 +30,7 @@ def transform_mp3_to_wav(input_mp3_path):
         print(f"[INFO] Converted {input_mp3_path} → {output_wav_path}")
         return output_wav_path
 
-    except Exception as exc:  # noqa: BLE001 - allow broad conversion errors
+    except Exception as exc:
         print(f"[ERROR] Could not convert MP3 to WAV: {exc}")
         return None
 
@@ -50,7 +50,7 @@ def parse_mp3_tags(input_mp3_path):
         artist = audio_file.tag.artist or "Unknown Artist"
         return title, artist
 
-    except Exception as exc:  # noqa: BLE001 - allow broad tag errors
+    except Exception as exc:
         print(f"[WARN] Could not read tags: {exc}")
         return "Unknown Title", "Unknown Artist"
 

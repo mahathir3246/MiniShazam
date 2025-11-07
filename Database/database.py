@@ -68,7 +68,10 @@ def store_fingerprint_hashes(track_id, hash_entries, db_conn):
     # Stores hashed fingerprint signatures for a track
     insert_query = 'INSERT INTO fingerprint (song_id, center, signature) VALUES (%s,%s,%s)'
     cursor = db_conn.cursor()
-    for hash_tuple, anchor_time_idx in hash_entries:
+
+    unique_entries = list(dict.fromkeys(hash_entries))
+
+    for hash_tuple, anchor_time_idx in unique_entries:
         row_data = (
             track_id,
             int(anchor_time_idx),
