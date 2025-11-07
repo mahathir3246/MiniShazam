@@ -2,7 +2,6 @@
 audio_processing.py
 -------------------
 Manually computes spectrograms and fingerprints from WAV or live audio data.
-Fully compatible with Freezam’s expected processing pipeline.
 """
 
 import numpy as np
@@ -94,7 +93,6 @@ def visualize_spectrogram(freq_array, time_array, power_matrix):
 
 def compute_audio_fingerprint(freq_bins, power_matrix, sample_rate):
     """
-    Generates octave-based audio fingerprint compatible with Freezam’s format.
     Extracts peak frequencies per octave band.
     """
     num_octaves = 8

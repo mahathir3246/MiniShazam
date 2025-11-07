@@ -2,7 +2,6 @@
 live_recognition.py
 -------------------
 Captures live microphone audio and performs fingerprint-based recognition.
-Integrates with the rest of the Freezam pipeline.
 """
 
 import sounddevice as sd

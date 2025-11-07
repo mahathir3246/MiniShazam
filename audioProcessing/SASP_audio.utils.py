@@ -2,7 +2,6 @@
 audio_utils.py
 --------------
 Handles audio format conversions (MP3 → WAV) and metadata extraction.
-Designed to match Freezam’s structure while isolating preprocessing logic.
 """
 
 from pydub import AudioSegment
