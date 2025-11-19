@@ -1,13 +1,13 @@
-# PostgreSQL database management for audio fingerprint storage(Creates database, inserts data, updates )
+# PostgreSQL database stuff for storing audio fingerprints(Creates database, inserts data, updates )
 
 import os
-
 import psycopg2
 from .config import HOST,DATABASE,DB_USER, DB_PASSWORD
 
 
 def get_db_connection():
     # Creates and returns a PostgreSQL connection object
+    # Just opens a connection to the database
     return psycopg2.connect(
         host=HOST,
         database=DATABASE,
@@ -23,9 +23,11 @@ def initialize_schema(db_conn):
     #   - linked via foreign key to music table
     cursor = db_conn.cursor()
     
+    #Dropping tables first to start fresh
     cursor.execute("DROP TABLE IF EXISTS fingerprint")
     cursor.execute("DROP TABLE IF EXISTS music")
     
+    #Crating tables
     cursor.execute(
         """CREATE TABLE IF NOT EXISTS music (
             song_id SERIAL PRIMARY KEY,
@@ -53,10 +55,11 @@ def insert_track_metadata(title, db_conn):
     return track_id
 
 def lookup_track_id_by_filename(file_name, db_conn):
-    # Retrieves track ID using filename (removes .wav extension)
+    # Retrieves track ID using filename
     cursor = db_conn.cursor()
     select_sql = 'SELECT song_id from music WHERE title = %s'
     title_without_ext = os.path.splitext(file_name)[0]
+    # Prints for debugging
     print(f"Looking for title: '{title_without_ext}'")
     title_value = (title_without_ext,)
     cursor.execute(select_sql, title_value)
@@ -101,6 +104,7 @@ def get_track_name_by_id(track_id, db_conn):
 
 def get_highest_track_id(db_conn):
     # Returns the maximum song_id value for iteration purposes
+    #Need this to know how many tracks we have
     cursor = db_conn.cursor()
     cursor.execute('SELECT MAX(song_id) from music')
     result_rows = cursor.fetchall()

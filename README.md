@@ -1,72 +1,83 @@
 # MiniShazam
 
-# Database Module
-
-This module provides PostgreSQL database management for the audio fingerprinting system.
-
 ## Overview
 
-The `database` module handles all database operations including schema creation, data insertion, retrieval, and updates for storing audio fingerprints and track metadata.
+MiniShazam uses audio fingerprinting to match recorded audio snippets against a database of known songs. It processes MP3 files, generates unique fingerprints, and can identify songs from short recordings.
 
-## Database Schema
 
-### `music` Table
-- `song_id` (SERIAL PRIMARY KEY) - Unique identifier for each track
-- `title` (TEXT NOT NULL) - Track title
-- `fingerprinted` (INT DEFAULT 0) - Flag indicating if track has been processed (0 = not fingerprinted, 1 = fingerprinted)
+## Project Structure
 
-### `fingerprint` Table
-- `sig_id` (SERIAL PRIMARY KEY) - Unique identifier for each fingerprint
-- `song_id` (INT) - Foreign key reference to `music.song_id` (CASCADE DELETE)
-- `center` (INT) - Time center point for the fingerprint
-- `signature` (NUMERIC ARRAY) - Audio fingerprint signature data
+- Database/ # Database configuration and operations
+ - config.py # Database credentials
+ - database.py # Database functions
+- audioProcessing/ # Audio processing modules
+ - SASP_audio_processing.py # Spectrogram and fingerprint generation
+ - SASP_audio_utils.py # MP3 conversion and utilities
+- music/
+ - mp3/ # Source MP3 files
+ - wav/ # Converted WAV files
+ - snippet/ # Recorded audio snippets
+- cli.py # Command-line interface
+- GUI.py # Graphical user interface
+- orchestrator.py # Main logic connecting database and audio processing
+- requirements.txt # Python dependencies
 
-## Setup
+
+## Installation
 
 ### 1. Install PostgreSQL
 
 #### For WSL (Windows Subsystem for Linux)
 
 1. **Update package list**:
-   ```bash
+ 
    sudo apt update
-   ```
-
-2. **Install PostgreSQL**:
-   ```bash
+   2. **Install PostgreSQL**:
+   
    sudo apt install postgresql postgresql-contrib
-   ```
-
-3. **Start PostgreSQL service**:
-   ```bash
+   3. **Start PostgreSQL service**:
    sudo service postgresql start
-   ```
-
-4. **Create PostgreSQL user and database**:
-   ```bash
+   4. **Create PostgreSQL user and database**:h
    sudo -u postgres psql
-   ```
+      
    Then in the PostgreSQL prompt:
-   ```sql
-   CREATE USER <'your_username'> WITH PASSWORD 'your_password';
-   ALTER USER <'your_username'> CREATEDB;
-   CREATE DATABASE <database_name>;
+   CREATE USER your_username WITH PASSWORD 'your_password';
+   ALTER USER your_username CREATEDB;
+   CREATE DATABASE music;
    \q
-   ```
+   ### 2. Configure Database Credentials
 
+Update `Database/config.py` with your PostgreSQL credentials:
+HOST = 'localhost'
+DATABASE = 'music'
+DB_USER = 'your_username'
+DB_PASSWORD = 'your_password'### 3. Install Python Dependencies
+h
+pip install -r requirements.txt## Usage
 
-### 2. Configure Database Credentials
+### Building the Database
 
-Update `database/config.py` with your PostgreSQL credentials:
-```python
-HOST=<hostname>  #probably localhost
-DATABASE=<database_name> # Database you created in step 4
-DB_USER = 'your_username'  # username you created in step 4
-DB_PASSWORD = 'your_password'  # password you set when creating the user
+First, place your MP3 files in the `music/mp3/` directory, then build the database:
 
-```
+   - python cli.py build
 
-### 3. Install Python Dependencies
-```bash
-pip install -r requirements.txt
-```
+This will:
+- Convert MP3 files to WAV format
+- Generate audio fingerprints for each track
+- Store everything in the PostgreSQL database
+
+### Identifying Songs via CLI
+
+To identify a WAV snippet file:
+ash
+python cli.py identify music/snippet/your_recording.wav### Using the GUI
+
+Launch the graphical interface:
+
+   - python GUI.py
+
+Then:
+1. Click "Tap to minishazam" to start recording
+2. Play the song you want to identify
+3. Click "Stop" when done
+4. The app will identify the song and display the result

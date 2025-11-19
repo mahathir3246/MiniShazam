@@ -10,14 +10,14 @@ import orchestrator
 
 
 def run_cli(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="MiniShazam - Database and audio processing integration")
-    parser.add_argument("--mp3-dir", default="./music/mp3", help="Directory with source MP3 tracks")
-    parser.add_argument("--wav-dir", default="./music/wav", help="Directory containing WAV tracks")
+    parser = argparse.ArgumentParser(description="MiniShazam")
 
     subparsers = parser.add_subparsers(dest="command")
 
-    subparsers.add_parser("construct", help="Populate the database from MP3 files")
+    # Build command - builds database from MP3 files
+    subparsers.add_parser("build", help="Build database from MP3 files in ./music/mp3")
 
+    # Identify command - finds matching song for a snippet
     identify_parser = subparsers.add_parser("identify", help="Identify a WAV snippet against the database")
     identify_parser.add_argument("snippet", help="Path to the WAV snippet")
 
@@ -29,7 +29,8 @@ def run_cli(argv: list[str] | None = None) -> int:
 
     connection = db.get_db_connection()
     try:
-        if args.command == "construct":
+        if args.command == "build":
+            # Uses default directories: ./music/mp3 and ./music/wav
             orchestrator.construct_music_database(connection, mp3_directory=args.mp3_dir, wav_directory=args.wav_dir)
             return 0
 

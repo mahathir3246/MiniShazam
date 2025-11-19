@@ -6,7 +6,6 @@ import scipy.io.wavfile as wav
 import threading
 import time
 import os
-
 import Database.database as db
 import orchestrator
 
@@ -15,7 +14,7 @@ class SASPGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("MiniShazam 🎧")
-        self.root.geometry("420x380")
+        self.root.geometry("720x680")
         self.root.configure(bg="#FAFAFA")
 
         # Recording state
@@ -145,7 +144,7 @@ class SASPGUI:
 
             if len(recording) > 0:
                 wav.write(save_path, self.fs, recording)
-                self.status_label.config(text=f"Saved to {save_path} ✅")
+                self.status_label.config(text=f"Saved to {save_path}")
 
                 self.status_label.config(text="Identifying snippet...")
                 matches = orchestrator.find_matching_track(self.db_connection, save_path)
