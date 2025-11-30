@@ -31,7 +31,7 @@ def run_cli(argv: list[str] | None = None) -> int:
     try:
         if args.command == "build":
             # Uses default directories: ./music/mp3 and ./music/wav
-            orchestrator.construct_music_database(connection, mp3_directory=args.mp3_dir, wav_directory=args.wav_dir)
+            orchestrator.construct_music_database(connection)
             return 0
 
         if args.command == "identify":

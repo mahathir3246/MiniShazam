@@ -9,10 +9,10 @@ from scipy.io import wavfile
 import matplotlib
 import matplotlib.pyplot as plt
 
-MAX_PEAKS_PER_COLUMN = 3
-MIN_PEAK_MAG_RATIO = 0.35
-FAN_VALUE = 4
-MAX_TIME_DELTA = 15
+MAX_PEAKS_PER_COLUMN = 5
+MIN_PEAK_MAG_RATIO = 0.25
+FAN_VALUE = 6
+MAX_TIME_DELTA = 20
 
 """
  Shared internal function 

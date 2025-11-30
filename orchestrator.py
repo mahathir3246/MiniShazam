@@ -9,8 +9,8 @@ from audioProcessing import (SASP_audio_processing as audio_processing,SASP_audi
 
 # Thresholds for matching - had to tune these a bit to reduce false positives
 MIN_ABSOLUTE_VOTES = 5
-MIN_SNIPPET_VOTE_RATIO = 0.012
-MIN_STORED_VOTE_RATIO = 0.008
+MIN_SNIPPET_VOTE_RATIO = 0.006
+MIN_STORED_VOTE_RATIO = 0.004
 
 
 # Helper to get all files with a certain extension, sorted
