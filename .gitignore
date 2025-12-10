@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+music/snippet/
+.DS_Store
